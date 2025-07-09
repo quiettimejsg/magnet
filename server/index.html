@@ -2,19 +2,19 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>磁力下载管理</title>
+    <title>局域网磁力下载</title>
 </head>
 <body>
-    <h1>磁力链接下载器（局域网）</h1>
+    <h1>局域网磁力下载工具</h1>
 
-    <h3>提交磁力链接</h3>
+    <h3>提交 Magnet 链接</h3>
     <form id="magnetForm">
         <input type="text" id="magnetLink" placeholder="请输入 magnet:? 链接" style="width: 400px;">
         <button type="submit">提交</button>
     </form>
 
-    <h3>已下载文件列表</h3>
-    <button onclick="loadFileList()">刷新列表</button>
+    <h3>已下载文件</h3>
+    <button onclick="loadFileList()">刷新文件列表</button>
     <ul id="fileList"></ul>
 
     <script>
@@ -60,7 +60,7 @@
                 });
         }
 
-        // 页面加载时自动刷新
+        // 页面加载时自动刷新文件列表
         loadFileList();
     </script>
 </body>
