@@ -6,7 +6,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -64,6 +64,19 @@
         .test-btn:hover {
             background-color: #F57C00;
         }
+        .pause-btn {
+            background-color: #FFC107;
+            color: #333;
+        }
+        .pause-btn:hover {
+            background-color: #FFB300;
+        }
+        .remove-btn {
+            background-color: #F44336;
+        }
+        .remove-btn:hover {
+            background-color: #D32F2F;
+        }
         .status {
             margin: 20px 0;
             padding: 15px;
@@ -85,6 +98,115 @@
             color: #004085;
             border: 1px solid #b8daff;
         }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .loading {
+            display: none;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* 下载进度样式 */
+        .download-item {
+            margin: 15px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .download-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .download-name {
+            font-weight: bold;
+            color: #333;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .download-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .status-paused {
+            background-color: #FF9800;
+            color: white;
+        }
+        .status-complete {
+            background-color: #2196F3;
+            color: white;
+        }
+        .status-error {
+            background-color: #F44336;
+            color: white;
+        }
+        .status-waiting {
+            background-color: #9E9E9E;
+            color: white;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        .progress-text {
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            position: relative;
+            top: -20px;
+        }
+        .download-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+        .download-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .download-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .download-controls button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        /* 文件列表样式 */
         #fileList {
             list-style: none;
             padding: 0;
@@ -110,20 +232,24 @@
             color: #666;
             margin-top: 5px;
         }
-        .section {
-            margin: 30px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .section h3 {
-            margin-top: 0;
-            color: #333;
-        }
-        .loading {
-            display: none;
-            color: #666;
-            font-style: italic;
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .download-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .download-name {
+                max-width: 100%;
+                margin-bottom: 10px;
+            }
+            .download-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .download-stats {
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
@@ -150,9 +276,10 @@
         </div>
 
         <div class="section">
-            <h3>下载状态</h3>
-            <button class="refresh-btn" onclick="loadDownloadStatus()">刷新状态</button>
-            <div id="downloadStatus"></div>
+            <h3>下载进度</h3>
+            <button class="refresh-btn" onclick="loadProgress()">刷新进度</button>
+            <div class="loading" id="progressLoading">正在加载下载进度...</div>
+            <div id="downloadProgress"></div>
         </div>
 
         <div class="section">
@@ -164,6 +291,8 @@
     </div>
 
     <script>
+        let progressInterval;
+
         function showStatus(elementId, message, type = 'info') {
             const element = document.getElementById(elementId);
             element.innerHTML = `<div class="status ${type}">${message}</div>`;
@@ -177,7 +306,8 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.aria2c_available) {
-                        showStatus('systemStatus', `✓ aria2c 可用: ${data.version}`, 'success');
+                        const rpcStatus = data.rpc_status ? "✓ RPC 连接正常" : "✗ RPC 连接失败";
+                        showStatus('systemStatus', `✓ aria2c 可用: ${data.version}<br>${rpcStatus}`, 'success');
                     } else {
                         showStatus('systemStatus', `✗ aria2c 不可用: ${data.error}`, 'error');
                     }
@@ -210,11 +340,10 @@
                 if (data.error) {
                     showStatus('submitStatus', `提交失败: ${data.error}`, 'error');
                 } else {
-                    showStatus('submitStatus', data.message, 'success');
+                    showStatus('submitStatus', `${data.message} (任务ID: ${data.task_id})`, 'success');
                     document.getElementById('magnetLink').value = '';
                     setTimeout(() => {
-                        loadFileList();
-                        loadDownloadStatus();
+                        loadProgress();
                     }, 2000);
                 }
             })
@@ -223,85 +352,113 @@
             });
         });
 
-        function loadDownloadStatus() {
-            fetch('/status')
-                .then(res => res.json())
-                .then(data => {
-                    const statusDiv = document.getElementById('downloadStatus');
-                    if (data.active_downloads > 0) {
-                        statusDiv.innerHTML = `
-                            <div class="status info">
-                                🔄 正在下载 ${data.active_downloads} 个任务
-                            </div>
-                        `;
-                    } else {
-                        statusDiv.innerHTML = `
-                            <div class="status success">
-                                ✓ 当前没有活动下载任务
-                            </div>
-                        `;
-                    }
-                })
-                .catch(err => {
-                    showStatus('downloadStatus', `获取状态失败: ${err}`, 'error');
-                });
-        }
-
-        function loadFileList() {
-            const loading = document.getElementById('fileLoading');
+        function loadProgress() {
+            const loading = document.getElementById('progressLoading');
             loading.style.display = 'block';
             
-            fetch('/files')
+            fetch('/progress')
                 .then(res => res.json())
                 .then(data => {
                     loading.style.display = 'none';
-                    const list = document.getElementById('fileList');
-                    list.innerHTML = '';
+                    const progressDiv = document.getElementById('downloadProgress');
                     
                     if (data.error) {
-                        list.innerHTML = `<li style="color: red;">获取文件列表失败: ${data.error}</li>`;
+                        progressDiv.innerHTML = `<div class="status error">获取进度失败: ${data.error}</div>`;
                         return;
                     }
                     
-                    if (data.files.length === 0) {
-                        list.innerHTML = '<li>暂无下载文件</li>';
+                    if (data.downloads.length === 0) {
+                        progressDiv.innerHTML = '<div class="status info">当前没有下载任务</div>';
                         return;
                     }
 
-                    data.files.forEach(function(file) {
-                        const li = document.createElement('li');
-                        const a = document.createElement('a');
-                        a.href = '/download/' + encodeURIComponent(file.name);
-                        a.textContent = file.name;
-                        a.download = file.name;
-                        
-                        const fileInfo = document.createElement('div');
-                        fileInfo.className = 'file-info';
-                        fileInfo.textContent = `大小: ${file.size_mb} MB (${file.size} bytes)`;
-                        
-                        li.appendChild(a);
-                        li.appendChild(fileInfo);
-                        list.appendChild(li);
+                    let html = '';
+                    data.downloads.forEach(download => {
+                        html += createDownloadItem(download);
                     });
+                    
+                    progressDiv.innerHTML = html;
                 })
                 .catch(err => {
                     loading.style.display = 'none';
-                    const list = document.getElementById('fileList');
-                    list.innerHTML = `<li style="color: red;">获取文件列表失败: ${err}</li>`;
+                    document.getElementById('downloadProgress').innerHTML = 
+                        `<div class="status error">获取进度失败: ${err}</div>`;
                 });
         }
 
-        // 页面加载时自动执行
-        window.addEventListener('load', function() {
-            testSystem();
-            loadFileList();
-            loadDownloadStatus();
-        });
+        function createDownloadItem(download) {
+            const statusClass = `status-${download.status}`;
+            const statusText = {
+                'active': '下载中',
+                'paused': '已暂停',
+                'complete': '已完成',
+                'error': '错误',
+                'waiting': '等待中'
+            }[download.status] || download.status;
 
-        // 每30秒自动刷新状态
-        setInterval(function() {
-            loadDownloadStatus();
-        }, 30000);
-    </script>
-</body>
-</html>
+            return `
+                <div class="download-item">
+                    <div class="download-header">
+                        <div class="download-name" title="${download.file_name}">${download.file_name}</div>
+                        <div class="download-status ${statusClass}">${statusText}</div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${download.progress}%"></div>
+                        <div class="progress-text">${download.progress}%</div>
+                    </div>
+                    
+                    <div class="download-info">
+                        <div class="download-stats">
+                            <span>大小: ${download.formatted_completed} / ${download.formatted_total}</span>
+                            <span>速度: ${download.formatted_speed}</span>
+                            <span>剩余时间: ${download.eta}</span>
+                            <span>连接: ${download.connections}</span>
+                            <span>种子: ${download.num_seeders}</span>
+                        </div>
+                        
+                        <div class="download-controls">
+                            ${download.status === 'active' ? 
+                                `<button class="pause-btn" onclick="pauseDownload('${download.gid}')">暂停</button>` :
+                                `<button class="refresh-btn" onclick="resumeDownload('${download.gid}')">继续</button>`
+                            }
+                            <button class="remove-btn" onclick="removeDownload('${download.gid}')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function pauseDownload(gid) {
+            fetch(`/pause/${gid}`, {method: 'POST'})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`暂停失败: ${data.error}`);
+                    } else {
+                        loadProgress();
+                    }
+                })
+                .catch(err => alert(`暂停失败: ${err}`));
+        }
+
+        function resumeDownload(gid) {
+            fetch(`/resume/${gid}`, {method: 'POST'})
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`恢复失败: ${data.error}`);
+                    } else {
+                        loadProgress();
+                    }
+                })
+                .catch(err => alert(`恢复失败: ${err}`));
+        }
+
+        function removeDownload(gid) {
+            if (confirm('确定要删除这个下载任务吗？')) {
+                fetch(`/remove/${gid}`, {method: 'POST'})
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert 
