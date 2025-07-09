@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>磁力下载管理</title>
+</head>
+<body>
+    <h1>磁力链接下载器（局域网）</h1>
+
+    <h3>提交磁力链接</h3>
+    <form id="magnetForm">
+        <input type="text" id="magnetLink" placeholder="请输入 magnet:? 链接" style="width: 400px;">
+        <button type="submit">提交</button>
+    </form>
+
+    <h3>已下载文件列表</h3>
+    <button onclick="loadFileList()">刷新列表</button>
+    <ul id="fileList"></ul>
+
+    <script>
+        document.getElementById('magnetForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var magnet = document.getElementById('magnetLink').value;
+
+            var formData = new FormData();
+            formData.append('magnet', magnet);
+
+            fetch('/add_magnet', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.message);
+                loadFileList();
+            })
+            .catch(err => {
+                alert('提交失败: ' + err);
+            });
+        });
+
+        function loadFileList() {
+            fetch('/files')
+                .then(res => res.json())
+                .then(data => {
+                    var list = document.getElementById('fileList');
+                    list.innerHTML = '';
+                    data.files.forEach(function(file) {
+                        var li = document.createElement('li');
+                        var a = document.createElement('a');
+                        a.href = '/download/' + encodeURIComponent(file);
+                        a.textContent = file;
+                        a.download = file;
+                        li.appendChild(a);
+                        list.appendChild(li);
+                    });
+                })
+                .catch(err => {
+                    alert('获取文件列表失败: ' + err);
+                });
+        }
+
+        // 页面加载时自动刷新
+        loadFileList();
+    </script>
+</body>
+</html>
