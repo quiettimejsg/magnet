@@ -461,4 +461,74 @@
                     .then(res => res.json())
                     .then(data => {
                         if (data.error) {
-                            alert 
+                            alert(`删除失败: ${data.error}`);
+                        } else {
+                            loadProgress();
+                        }
+                    })
+                    .catch(err => alert(`删除失败: ${err}`));
+            }
+        }
+
+        function loadFileList() {
+            const loading = document.getElementById('fileLoading');
+            loading.style.display = 'block';
+            
+            fetch('/files')
+                .then(res => res.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    const fileListElement = document.getElementById('fileList');
+                    
+                    if (data.error) {
+                        fileListElement.innerHTML = `<div class="status error">获取文件列表失败: ${data.error}</div>`;
+                        return;
+                    }
+                    
+                    if (data.files.length === 0) {
+                        fileListElement.innerHTML = '<div class="status info">暂无已下载文件</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.files.forEach(file => {
+                        html += `
+                            <li>
+                                <a href="/download/${encodeURIComponent(file.name)}" download>
+                                    ${file.name}
+                                </a>
+                                <div class="file-info">
+                                    大小: ${file.size_mb.toFixed(2)} MB
+                                </div>
+                            </li>
+                        `;
+                    });
+                    
+                    fileListElement.innerHTML = html;
+                })
+                .catch(err => {
+                    loading.style.display = 'none';
+                    document.getElementById('fileList').innerHTML = 
+                        `<div class="status error">获取文件列表失败: ${err}</div>`;
+                });
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            testSystem();
+            loadProgress();
+            loadFileList();
+            
+            // 设置定时刷新
+            progressInterval = setInterval(loadProgress, 3000);
+        });
+
+        // 页面卸载时清理定时器
+        window.addEventListener('beforeunload', function() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+        });
+    </script>
+</body>
+</html>
