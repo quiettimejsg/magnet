@@ -360,9 +360,14 @@ def test_aria2():
             "rpc_status": False
         })
 
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath('.'), relative_path)
+
 @app.route('/')
 def index():
-    return send_file("index.html")
+    return send_file(resource_path('server/index.html'))
 
 def signal_handler(sig, frame):
     print('Shutting down...')
