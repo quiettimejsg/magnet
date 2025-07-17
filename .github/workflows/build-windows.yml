@@ -28,7 +28,7 @@ jobs:
         pyinstaller server.spec
 
     - name: Upload build artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: magnet-downloader-windows
         path: dist/
