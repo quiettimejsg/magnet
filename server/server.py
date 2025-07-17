@@ -12,8 +12,10 @@ from datetime import datetime
 app = Flask(__name__)
 
 # 下载文件保存目录
-DOWNLOAD_DIR = "./downloads"
-ARIA2_SESSION_DIR = "./aria2_sessions"
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
+ARIA2_SESSION_DIR = os.path.join(BASE_DIR, "aria2_sessions")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 os.makedirs(ARIA2_SESSION_DIR, exist_ok=True)
 
@@ -31,15 +33,16 @@ def start_aria2_daemon():
     
     try:
         # aria2c RPC 配置
+        aria2c_path = os.path.join(BASE_DIR, "..", "aria2_sessions", "aria2c.exe")
         cmd = [
-            "aria2c",
+                aria2c_path,
             "--enable-rpc",
             "--rpc-listen-all",
             "--rpc-listen-port=6800",
             "--rpc-secret=mysecret",
             "--dir=" + DOWNLOAD_DIR,
             "--seed-time=0",
-            "--max-upload-limit=1K",
+            "--max-upload-limit=5M",
             "--enable-dht=true",
             "--enable-dht6=true",
             "--enable-peer-exchange=true",
@@ -50,9 +53,10 @@ def start_aria2_daemon():
             "--bt-max-peers=100",
             "--bt-request-peer-speed-limit=50K",
             "--max-concurrent-downloads=5",
+            "--optimize-concurrent-downloads=true",
             "--max-connection-per-server=10",
-            "--min-split-size=10M",
-            "--split=10",
+            "--min-split-size=5M",
+            "--split=16",
             "--timeout=60",
             "--retry-wait=30",
             "--max-tries=5",
@@ -330,8 +334,9 @@ def test_aria2():
     """测试 aria2c 是否正常工作"""
     try:
         # 测试 aria2c 版本
+        aria2c_path = os.path.join(BASE_DIR, "..", "aria2_sessions", "aria2c.exe")
         result = subprocess.run(
-            ["aria2c", "--version"],
+                [aria2c_path, "--version"],
             capture_output=True,
             text=True,
             timeout=10
